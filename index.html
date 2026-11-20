@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мій розклад</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* VOICE: playful, loud, made for a 12-year-old, still instantly usable
+   IDEA: a sticker-covered school planner on grid paper
+   PICTURE: the "now / next" sticker card with a live countdown and a giant join button
+   COLOUR and TYPE: each subject its own sticker colour, thick ink outlines, hard shadows; Unbounded + Nunito
+   LAYOUT: title + language, next-lesson card, day pills, lesson stickers, all-subjects drawer */
+:root{color-scheme:light dark;
+--bg:light-dark(#fff4dc,#16151d);--grid:light-dark(#f1e3c2,#22212c);
+--card:light-dark(#ffffff,#24232f);--ink:light-dark(#151515,#f6f1e6);--mute:light-dark(#5e5a52,#b3ad9f);
+--ol:light-dark(#151515,#f6f1e6);--y:#ffd23f;--btn:light-dark(#151515,#ffd23f);--btn-ink:light-dark(#fff,#151515)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;color:var(--ink);font:16px/1.5 Nunito,system-ui,sans-serif;overflow-x:clip;
+ background:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:26px 26px}
+.wrap{max-width:820px;margin:0 auto;padding:clamp(18px,4vw,40px) max(4vw,14px) 40px}
+h1,h2,.uf{font-family:Unbounded,Nunito,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;justify-content:space-between;margin-bottom:22px}
+h1{font-size:clamp(30px,7vw,48px);line-height:1.05;margin:0;font-weight:800;letter-spacing:-.02em}
+.tag{display:inline-block;background:#ff5a36;color:#fff;border:3px solid var(--ol);border-radius:12px;padding:2px 12px;font-size:.5em;vertical-align:middle;transform:rotate(-6deg);box-shadow:3px 3px 0 var(--ol);margin-left:6px}
+.lang{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:700}
+select{font:700 16px Nunito,sans-serif;padding:10px 12px;border-radius:14px;border:3px solid var(--ol);background:var(--card);color:var(--ink);min-height:48px;box-shadow:3px 3px 0 var(--ol)}
+.hero{position:relative;background:var(--y);color:#151515;border:3px solid var(--ol);border-radius:26px;padding:22px 22px 20px;box-shadow:6px 6px 0 var(--ol);margin-bottom:26px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 20px;align-items:center;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:#ff7ac6;border:3px solid #151515;z-index:0}
+.hero>*{position:relative;z-index:1}
+.hlab{display:inline-block;font:800 13px Unbounded,sans-serif;background:#151515;color:var(--y);padding:4px 10px;border-radius:10px}
+.hname{font:800 clamp(24px,5.5vw,36px)/1.1 Unbounded,sans-serif;margin:10px 0 4px;text-wrap:balance}
+.hsub{font-weight:700}
+.cd{font:800 clamp(34px,8vw,54px)/1 Unbounded,sans-serif;text-align:center;background:#fff;border:3px solid #151515;border-radius:20px;padding:12px 16px;transform:rotate(3deg);box-shadow:4px 4px 0 #151515;white-space:nowrap}
+.cd small{display:block;font:800 12px Nunito,sans-serif;margin-top:4px}
+.hero .go{grid-column:1/3}
+.go{display:flex;align-items:center;justify-content:center;gap:10px;background:var(--btn);color:var(--btn-ink);border:3px solid var(--ol);border-radius:16px;min-height:56px;padding:0 20px;font:800 17px Unbounded,sans-serif;text-decoration:none;box-shadow:4px 4px 0 var(--ol);transition:transform .1s,box-shadow .1s;cursor:pointer}
+.hero .go{background:#151515;color:var(--y);border-color:#151515;box-shadow:4px 4px 0 #fff}
+.go:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ol)}
+.chkbig{background:#fff;color:#151515;border-color:#151515;cursor:default}
+.days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0 0 18px}
+.days button{font:800 15px Unbounded,sans-serif;min-height:54px;border-radius:16px;border:3px solid var(--ol);background:var(--card);color:var(--ink);cursor:pointer;position:relative;box-shadow:3px 3px 0 var(--ol)}
+.days button[aria-pressed=true]{background:#4d7cff;color:#fff;transform:translateY(-3px);box-shadow:3px 6px 0 var(--ol)}
+.days .t{position:absolute;top:-12px;left:50%;transform:translateX(-50%) rotate(-4deg);background:#3ddc97;color:#151515;border:2px solid #151515;font:800 10px Nunito,sans-serif;padding:0 6px;border-radius:8px;white-space:nowrap}
+button:focus-visible,a:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #ff5a36;outline-offset:3px}
+.list{display:flex;flex-direction:column;gap:14px}
+.les{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:8px 16px;align-items:center;background:var(--card);border:3px solid var(--ol);border-radius:22px;padding:14px 16px 14px 14px;box-shadow:4px 4px 0 var(--ol);position:relative}
+.les.live{outline:4px solid #3ddc97;outline-offset:3px}
+.les.past{opacity:.72}
+.tm{text-align:center}
+.tm b{display:block;font:800 22px/1 Unbounded,sans-serif;white-space:nowrap}
+.tm span{font-size:12px;color:var(--mute);white-space:nowrap}
+.st{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:14px;border:3px solid #151515;font:800 15px Unbounded,sans-serif;color:#151515;margin:0 auto 6px;transform:rotate(-7deg);box-shadow:2px 2px 0 #151515}
+.les:nth-child(even) .st{transform:rotate(6deg)}
+.name{font:800 18px/1.2 Unbounded,sans-serif}
+.teach{color:var(--mute);font-size:14px;font-weight:600}
+.meta{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:8px;align-items:center;font-size:14px}
+.chip{font:700 13px Nunito,sans-serif;border:2px solid var(--ol);background:transparent;color:var(--ink);border-radius:10px;padding:3px 9px;cursor:pointer;min-height:32px}
+.chip.bk{text-decoration:none;display:inline-flex;align-items:center;background:#3ddc97;color:#151515;border-color:#151515}
+.now.star{background:var(--y)}
+.now{position:absolute;top:-13px;right:18px;background:#3ddc97;color:#151515;border:2px solid #151515;border-radius:10px;padding:1px 10px;font:800 12px Nunito,sans-serif;transform:rotate(3deg)}
+.note{font-size:12px;color:var(--mute);margin-top:4px}
+.act .go{min-height:52px;font-size:14px}
+.chk{display:flex;align-items:center;justify-content:center;text-align:center;background:var(--y);color:#151515;border:3px dashed #151515;border-radius:16px;padding:6px 14px;min-height:52px;max-width:170px;font:800 13px/1.2 Unbounded,sans-serif}
+.multi{grid-column:2/4;display:flex;flex-wrap:wrap;gap:8px}
+.multi .go{flex:1 1 130px;min-height:46px;font-size:13px;padding:0 12px}
+.empty{text-align:center;padding:30px;font-weight:700}
+details{margin-top:34px;background:var(--card);border:3px solid var(--ol);border-radius:22px;box-shadow:4px 4px 0 var(--ol);overflow:hidden}
+summary{cursor:pointer;font:800 17px Unbounded,sans-serif;padding:18px 20px;list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:44px}
+summary::after{content:"+";font-size:26px}
+details[open] summary::after{content:"–"}
+.alls{display:grid;gap:10px;padding:0 16px 18px}
+.row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;border-top:2px dashed var(--grid);padding-top:10px}
+.row .st{width:36px;height:36px;font-size:12px;margin:0;border-width:2px}
+.row a{font-weight:800;color:var(--ink)}
+.row small{color:var(--mute);display:block}
+.foot{color:var(--mute);font-size:13px;margin-top:20px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#151515;color:var(--y);border:3px solid var(--y);font-weight:800;padding:8px 16px;border-radius:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+.stars{margin-top:10px;font-size:20px;letter-spacing:2px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.stars span{font:800 13px Nunito,sans-serif;letter-spacing:0;background:#151515;color:var(--y);padding:2px 8px;border-radius:8px}
+.stars.big{font-size:clamp(24px,6vw,34px);margin:6px 0}
+.hero.win{background:#3ddc97;grid-template-columns:minmax(0,1fr) 130px}
+.hero.win::after{background:#4d7cff}
+.hero.win .hlab{background:#151515;color:#3ddc97}
+.cup{width:130px;height:140px;transform:rotate(6deg);filter:drop-shadow(4px 4px 0 #151515);animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:rotate(-4deg) translateY(-6px)}}
+.hero>.confetti{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.confetti i{position:absolute;top:-14px;width:10px;height:16px;border:2px solid #151515;border-radius:3px;animation:fall linear infinite}
+@keyframes fall{to{transform:translateY(260px) rotate(540deg)}}
+@keyframes pop{0%{transform:scale(.96)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
+.hero{animation:pop .4s ease-out}
+@media(max-width:600px){
+ .hero,.hero.win{grid-template-columns:minmax(0,1fr)}.cup{justify-self:end;width:90px;height:98px;margin-top:-8px}.hero .go{grid-column:1}.cd{justify-self:start}
+ .les{grid-template-columns:64px minmax(0,1fr);padding:14px 12px}
+ .tm b{font-size:17px}.st{width:40px;height:40px;font-size:13px}
+ .les>.act{grid-column:1/3}.act .go{width:100%}.chk{max-width:none}
+ .multi{grid-column:1/3}
+ .days{gap:5px}.days button{font-size:12px;min-height:48px;border-radius:12px}}
+@media(prefers-reduced-motion:reduce){.hero,.cup,.confetti i{animation:none}.confetti{display:none}.go,.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <h1>Мій розклад <span class="tag">6 клас</span></h1>
+ <label class="lang">Моя друга мова
+  <select id="lang">
+   <option value="all">Усі три</option>
+   <option value="pl">Польська</option>
+   <option value="de">Німецька</option>
+   <option value="gr">Новогрецька</option>
+  </select>
+ </label>
+</header>
+
+<section class="hero" id="hero" aria-live="polite"></section>
+<div class="days" id="days" role="group" aria-label="День тижня"></div>
+<div class="list" id="list"></div>
+
+<details>
+ <summary>Усі предмети, коди, підручники</summary>
+ <div class="alls" id="all"></div>
+</details>
+<p class="foot">Великий час — грузинський, дрібний — київський. Для Укр. літератури, Мистецтва й Технологій стоїть Zoom Демчинської, для «Пізнаю природу» — Zoom ЗБД.</p>
+</div>
+<div class="toast" id="toast">Скопійовано</div>
+
+<script>
+{
+const Z={
+ ukr:{u:"https://us04web.zoom.us/j/2275876759?pwd=SjZzN0VVSE5ZN3BERlJhR29LNkdzUT09",id:"227 587 6759",p:"123456"},
+ zar:{u:"https://us05web.zoom.us/j/89135590535?pwd=NXhWMVBYWmlZNGN3VFlqUXVxOVFRdz09",id:"891 3559 0535",p:"16"},
+ eng:{u:"https://us04web.zoom.us/j/74797849647?pwd=1slQWjgVyssMuHPTowJ36o2bbtppGW.1",id:"747 9784 9647",p:"english"},
+ pl:{u:"https://us06web.zoom.us/j/8602437961?pwd=Umw0MENiUWRvSHhoZFU0WnFsQTJCZz09",id:"860 243 7961",p:"12345"},
+ de:{u:"https://us05web.zoom.us/j/5746283287?pwd=QnZJc2l3SDVBSmduTGJEWFd3b2pRQT09",id:"574 628 3287",p:"55555"},
+ gr:{u:"https://us04web.zoom.us/j/74306696413?pwd=5D3CnkLYBdE2KPubHTihcwbZ0O3PS7.1",id:"743 0669 6413",p:"Greek"},
+ mat:{u:"https://us04web.zoom.us/j/73677751266?pwd=AhrLLW0bbObwYrfQFSHa3izC69p5H1.1",id:"736 7775 1266",p:"123456"},
+ ist:{u:"https://us04web.zoom.us/j/76126643152?pwd=0ix6By2SzHNbnQcjf2so4u04j6QQ9u.1",id:"761 2664 3152",p:"12345"},
+ zbd:{u:"https://zoom.us/j/9281676263?pwd=U3RqN1hoUGhjV0pQc1ljemFiLzVBdz09",id:"928 167 6263",p:"Wva9fR"},
+ geo:{u:"https://us06web.zoom.us/j/76483382713?pwd=dmt5ZVRUOHprRjc4K2tFSDFtcEkvdz09",id:"764 8338 2713",p:"1234"},
+ inf:{u:"https://us05web.zoom.us/j/82391320050?pwd=0ojTEUCvJqPfIbOV6BMTkgqHPyPiKC.1",id:"823 9132 0050",p:"112233"},
+ fiz:{u:"https://us04web.zoom.us/j/79163734636?pwd=H0enfEWi2yaSHtc8ms17O5o452pwLb.1",id:"791 6373 4636",p:"coach"},
+ psy:{u:"https://us04web.zoom.us/j/74714221833?pwd=Ca0JMjIgQeqVDcbtRa9zVH6j7jsCxJ.1",id:"747 1422 1833",p:"2026"}
+};
+const S={
+ ukrm:{n:"Українська мова",a:"Ук",c:"#ffd23f",t:"Демчинська Юлія Іванівна",z:"ukr",b:"https://pidruchnyk.com.ua/2595-ukrmova-6-klas-golub.html"},
+ ukrl:{n:"Українська література",a:"Лі",c:"#ffb03a",t:"Демчинська Юлія Іванівна",z:"ukr",same:1,b:"https://pidruchnyk.com.ua/2615-ukralit-6-klas-arkhypova.html"},
+ mys:{n:"Мистецтво",a:"Ми",c:"#ff7ac6",t:"Демчинська Юлія Іванівна",z:"ukr",same:1,b:"https://pidruchnyk.com.ua/2692-mystetstvo-6-klas-masol-2023.html"},
+ teh:{n:"Технології",a:"Те",c:"#c3a6ff",t:"Демчинська Юлія Іванівна",z:"ukr",same:1,b:"https://pidruchnyk.com.ua/2693-tehnologii-6-klas-hodzytska.html"},
+ zar:{n:"Зарубіжна література",a:"Зл",c:"#ff9e7a",t:"Головченко Крістіна Азерівна",z:"zar",b:"https://pidruchnyk.com.ua/2624-zaralit-6-klas-nikolenko-2023.html"},
+ eng:{n:"Англійська мова",a:"En",c:"#7fb2ff",t:"Скрипник Інна Степанівна",z:"eng",b:"https://shkola.in.ua/2816-anhliiska-mova-6-klas-karpiuk-2023.html"},
+ pl:{n:"Польська мова",a:"Pl",c:"#ff8080",t:"Сергійчук Вікторія Олегівна",z:"pl",b:"https://pidruchnyk.com.ua/2661-polska-mova-6-klas-voitseva.html"},
+ de:{n:"Німецька мова",a:"De",c:"#ffcf5c",t:"Єпєс Контрерас Вікторія Володимирівна",z:"de",b:"https://pidruchnyk.com.ua/2672-nimetska-mova-6-klas-sotnykova-2023-6-rik.html"},
+ gr:{n:"Новогрецька мова",a:"Gr",c:"#6fd3ff",t:"Козельська Каріна Олександрівна",z:"gr",b:"https://pidruchnyk.com.ua/2654-novohretska-mova-6-klas-voievutko.html"},
+ mat:{n:"Математика",a:"Ма",c:"#4d7cff",t:"Снацька Олена Миколаївна",z:"mat",b:"https://shkola.in.ua/2815-matematyka-6-klas-ister-2023.html"},
+ ist:{n:"Вступ до історії України",a:"Іс",c:"#e3b27a",t:"Холодар Валентина Петрівна",z:"ist",b:"https://pidruchnyk.com.ua/2610-istoriia-6-klas-shchupak-2023.html"},
+ zbd:{n:"Здоров'я, безпека та добробут",a:"ЗБ",c:"#ff5a36",t:"Петріна Тетяна Ігорівна",z:"zbd",b:"https://drive.google.com/drive/u/9/folders/1ztSJHEqz2JPYlyBx2Z9ImuKK3WBKx1AK"},
+ pryr:{n:"Пізнаю природу",a:"Пп",c:"#3ddc97",t:"Петріна Тетяна Ігорівна",z:"zbd",same:1,b:"https://drive.google.com/file/d/1YEI-WqtofX-xqM6ZfVHtXt5ON8rh0XNA/view?usp=drivesdk"},
+ geo:{n:"Географія",a:"Ге",c:"#8fe0a8",t:"Чернявський Андрій Михайлович",z:"geo",b:"https://drive.google.com/drive/folders/1hxhFLQKRXUoN_FOKqahBhH1KR3ZQfZna?usp=drive_link"},
+ inf:{n:"Інформатика",a:"</>",c:"#a0f0e0",t:"Шевченко Анжеліка Олегівна",z:"inf",b:"https://drive.google.com/file/d/13MUAaaxH-WF5dVKrqsoe51SsQfRh1iwL/view?usp=sharing"},
+ fiz:{n:"Фізична культура",a:"Фі",c:"#ffa94d",t:"Пшінка Олена Русланівна",z:"fiz"},
+ gro:{n:"Громадянська освіта",a:"Гр",c:"#d6c2ff",t:"Холодар Валентина Петрівна",z:"ist",b:"https://drive.google.com/file/d/1Nrzo_0FyfsSM_sVlPsJvSFWeYCc_O1ua/view"},
+ psy:{n:"Працюємо з психологом",a:"Пс",c:"#ffb3d9",t:"Скачок Юлія Володимирівна",z:"psy"},
+ god:{n:"Єдина година спілкування",a:"Го",c:"#fff",t:"Посилання щоразу нове",chat:1},
+ L2:{n:"Польська / німецька / новогрецька",a:"Мв",c:"#ff8080",multi:["pl","de","gr"]}
+};
+const W=[
+ [[0,"god"],[1,"L2"],[2,"geo"],[3,"mat"],[4,"mat"],[5,"fiz"],[6,"eng"]],
+ [[0,"gro"],[1,"eng"],[2,"ukrm"],[3,"ukrm"],[4,"pryr"],[5,"pryr"],[6,"ukrm"],[7,"teh"]],
+ [[0,"zar"],[1,"fiz"],[2,"inf"],[3,"ukrm"],[4,"eng"],[5,"mat"]],
+ [[0,"mat"],[1,"mat"],[2,"ist"],[3,"zbd"],[4,"psy"],[5,"fiz"],[6,"L2"],[7,"geo"]],
+ [[0,"L2"],[1,"ist"],[2,"ukrl"],[3,"ukrl"],[4,"mys"],[5,"inf"]]
+];
+const DN=["Пн","Вт","Ср","Чт","Пт"];
+const T=[["09:20","09:50"],["10:00","10:30"],["10:40","11:10"],["11:20","11:50"],["12:10","12:40"],["12:50","13:20"],["13:30","14:00"],["14:10","14:40"]];
+const $=id=>document.getElementById(id);
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const mins=s=>{const[a,b]=s.split(":");return a*60+ +b};
+const fmt=m=>String(Math.floor(m/60)%24).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+const tzNow=(tz,d)=>{const p=new Intl.DateTimeFormat("en-GB",{timeZone:tz,hour:"2-digit",minute:"2-digit",second:"2-digit",weekday:"short",hourCycle:"h23"}).formatToParts(d);const g=t=>p.find(x=>x.type===t).value;return{m:+g("hour")*60+ +g("minute"),s:+g("second"),wd:["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].indexOf(g("weekday"))}};
+let DIFF=120;
+try{const d=new Date();let k;try{k=tzNow("Europe/Kyiv",d).m}catch(e){k=tzNow("Europe/Kiev",d).m}DIFF=((tzNow("Asia/Tbilisi",d).m-k)+1440)%1440}catch(e){}
+
+/* Telegram */
+const tg=window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData!==undefined?window.Telegram.WebApp:null;
+if(tg){try{tg.ready();tg.expand();if(tg.colorScheme)document.documentElement.dataset.theme=tg.colorScheme}catch(e){}}
+const BOT=(()=>{try{return new URLSearchParams(location.search).get("bot")}catch(e){return null}})();
+const dateKey=(d=new Date())=>{try{return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Tbilisi",year:"numeric",month:"2-digit",day:"2-digit"}).format(d)}catch(e){return d.toISOString().slice(0,10)}};
+const getDone=()=>{try{return JSON.parse(store.get("done:"+dateKey())||"[]")}catch(e){return[]}};
+function markDone(n){
+ const d=getDone();const fresh=!d.includes(n);
+ if(fresh){d.push(n);store.set("done:"+dateKey(),JSON.stringify(d))}
+ if(tg&&BOT&&tg.initData){try{fetch(BOT.replace(/\/$/,"")+"/mark",{method:"POST",body:JSON.stringify({i:tg.initData,n}),keepalive:true})}catch(e){}}
+ if(fresh){showToast("+1 ⭐ Урок зараховано!");setTimeout(render,400)}
+}
+document.addEventListener("click",e=>{const a=e.target.closest("a[href^='http']");if(!a)return;
+ if(a.dataset.n!==undefined)markDone(+a.dataset.n);
+ if(!tg)return;e.preventDefault();try{tg.openLink(a.href)}catch(err){location.href=a.href}});
+
+let lang=store.get("l2")||"all";$("lang").value=lang;
+let now={m:0,s:0,wd:0};
+const refreshNow=()=>{try{now=tzNow("Asia/Tbilisi",new Date())}catch(e){const d=new Date();now={m:d.getHours()*60+d.getMinutes(),s:d.getSeconds(),wd:(d.getDay()+6)%7}}};
+refreshNow();
+const today=now.wd<=4?now.wd:-1;let cur=today<0?0:today;
+
+const pick=k=>{const s=S[k];if(!s.multi)return[k];return lang==="all"?s.multi:[lang]};
+const se=(n,a,b)=>({a:mins(T[n][0])+DIFF,b:mins(T[n][1])+DIFF});
+const stk=s=>`<span class="st" style="background:${s.c}">${s.a}</span>`;
+const nAttr=n=>n!==undefined&&cur===today?` data-n="${n}"`:"";
+const joinBtn=(k,label,n)=>{const s=S[k];return s.chat?`<div class="chk">ПЕРЕВІР у чаті класу</div>`:s.z?`<a class="go" href="${Z[s.z].u}" target="_blank" rel="noopener"${nAttr(n)}>${label||"Увійти"} →</a>`:""};
+const needToday=()=>today<0?[]:W[today].filter(([,k])=>!S[k].chat).map(([n])=>n);
+const prevSchoolKey=()=>{let t=Date.now()-864e5;for(let i=0;i<4;i++){const wd=new Date(t).getDay();if(wd!==0&&wd!==6)break;t-=864e5}return dateKey(new Date(t))};
+function streakToday(){
+ const k=dateKey();let st={};try{st=JSON.parse(store.get("streak")||"{}")}catch(e){}
+ if(st.last!==k){st.n=st.last===prevSchoolKey()?(st.n||0)+1:1;st.last=k;store.set("streak",JSON.stringify(st))}
+ return st.n||1;
+}
+
+function lesson(n,key){
+ const s=S[key],t=se(n),isToday=cur===today,live=isToday&&now.m>=t.a&&now.m<t.b,done=isToday&&getDone().includes(n),past=isToday&&now.m>=t.b&&!done;
+ const badge=done?'<span class="now star">⭐ зараховано</span>':live?'<span class="now">йде зараз</span>':'';
+ const keys=pick(key),one=keys.length===1?S[keys[0]]:null,show=one||s,z=show.z&&Z[show.z];
+ const tm=`<div class="tm">${stk(show)}<b>${fmt(t.a)}</b><span>Київ ${T[n][0]}</span></div>`;
+ const head=`<div><div class="name">${n} · ${show.n}</div>${show.t?`<div class="teach">${show.t}</div>`:""}`;
+ if(!one) return `<div class="les${live?" live":""}${past?" past":""}">${badge}${tm}${head}<div class="teach">Обери свою мову вгорі</div></div><div></div>
+  <div class="multi">${keys.map(k=>joinBtn(k,S[k].n.split(" ")[0],n)).join("")}</div></div>`;
+ return `<div class="les${live?" live":""}${past?" past":""}">${badge}${tm}${head}
+  <div class="meta">${z?`<button class="chip" data-c="${z.id.replace(/\s/g,"")}">ID ${z.id}</button><button class="chip" data-c="${z.p}">код ${z.p}</button>`:""}${show.b?`<a class="chip bk" href="${show.b}" target="_blank" rel="noopener">підручник</a>`:""}</div>
+  ${show.same?`<div class="note">Zoom цього ж вчителя</div>`:""}</div><div class="act">${joinBtn(keys[0],"",n)}</div></div>`;
+}
+function hero(){
+ const H=$("hero");H.classList.remove("win");
+ let lab,name,sub,cd="",btn="",extra="";
+ const need=needToday(),got=need.filter(n=>getDone().includes(n)).length;
+ const starLine=got?`<div class="stars">${"⭐".repeat(got)}<span>${got} з ${need.length} сьогодні</span></div>`:"";
+ if(today<0){lab="Вихідні";name="Відпочивай!";sub="Наступні уроки в понеділок о "+fmt(mins(T[0][0])+DIFF)}
+ else{
+  const L=W[today];let hit=null;
+  for(const[n,k]of L){const t=se(n);if(now.m<t.b){hit={n,k,t};break}}
+  const tomorrow="Завтра — "+(today<4?S[pick(W[today+1][0][1])[0]].n.toLowerCase()+" о "+fmt(mins(T[0][0])+DIFF):"вихідні");
+  if(!hit&&need.length&&got===need.length){
+   const st=streakToday();
+   H.classList.add("win");
+   H.innerHTML=`<div><span class="hlab">Ти — чемпіон дня</span><div class="hname">Усі уроки — на кожному!</div>
+    <div class="stars big">${"⭐".repeat(got)}</div>
+    <div class="hsub">${got} з ${need.length} зірочок · серія ${st} ${st===1?"день":st<5?"дні":"днів"} поспіль 🔥</div>
+    <div class="hsub">${today===4?"Вихідні заслужені на 100% 🎉":"Ти супер! Відпочивай 😎 "+tomorrow.toLowerCase()}</div></div>
+    <svg class="cup" viewBox="0 0 120 130" aria-hidden="true"><path d="M30 14h60v26c0 22-13 38-30 38S30 62 30 40z" fill="#ffd23f" stroke="#151515" stroke-width="5" stroke-linejoin="round"/><path d="M30 24H14c0 18 8 28 20 30M90 24h16c0 18-8 28-20 30" fill="none" stroke="#151515" stroke-width="5" stroke-linecap="round"/><path d="M52 78h16v18H52z" fill="#ffd23f" stroke="#151515" stroke-width="5"/><rect x="34" y="96" width="52" height="16" rx="4" fill="#ff5a36" stroke="#151515" stroke-width="5"/><path d="M60 30l5 10 11 1-8 7 3 11-11-6-11 6 3-11-8-7 11-1z" fill="#fff" stroke="#151515" stroke-width="3" stroke-linejoin="round"/></svg>
+    <div class="confetti" aria-hidden="true">${Array.from({length:18},(_,i)=>`<i style="left:${(i*37)%100}%;background:${["#ff5a36","#4d7cff","#ff7ac6","#fff","#151515"][i%5]};animation-delay:${(i%6)*.35}s;animation-duration:${2.4+(i%4)*.5}s"></i>`).join("")}</div>`;
+   return;
+  }
+  if(!hit){lab="На сьогодні все";name="Уроки закінчились";sub=got?`Гарна робота! Завтра збираємо всі зірочки 💪`:tomorrow;extra=starLine}
+  else{
+   const live=now.m>=hit.t.a,keys=pick(hit.k),s=keys.length===1?S[keys[0]]:S[hit.k];
+   lab=live?"Йде зараз":"Далі";name=s.n;sub=`${hit.n} урок · ${fmt(hit.t.a)}–${fmt(hit.t.b)}`;extra=starLine;
+   const left=live?hit.t.b-now.m:hit.t.a-now.m;
+   cd=`<div class="cd">${left>=60?Math.floor(left/60)+" год "+left%60:left} хв<small>${live?"до кінця уроку":"до початку"}</small></div>`;
+   btn=keys.length>1?`<div class="go" style="background:#fff;color:#151515">Обери мову вгорі</div>`:s.chat?`<div class="go chkbig">ПЕРЕВІР посилання в чаті класу</div>`:`<a class="go" href="${Z[s.z].u}" target="_blank" rel="noopener" data-n="${hit.n}">Увійти в Zoom → +⭐</a>`;
+  }
+ }
+ H.innerHTML=`<div><span class="hlab">${lab}</span><div class="hname">${name}</div><div class="hsub">${sub}</div>${extra}</div>${cd}${btn}`;
+}
+function render(){
+ $("days").innerHTML=DN.map((d,i)=>`<button aria-pressed="${i===cur}" data-i="${i}">${d}${i===today?'<span class="t">сьогодні</span>':''}</button>`).join("");
+ $("list").innerHTML=W[cur].map(([n,k])=>lesson(n,k)).join("");
+ hero();
+}
+$("all").innerHTML=Object.keys(S).filter(k=>S[k].z).map(k=>{const s=S[k],z=Z[s.z];return `<div class="row">${stk(s)}<div><a href="${z.u}" target="_blank" rel="noopener">${s.n}</a><small>${s.t} · ID ${z.id} · код ${z.p}</small></div>${s.b?`<a class="chip bk" href="${s.b}" target="_blank" rel="noopener">підручник</a>`:""}</div>`}).join("");
+$("days").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;cur=+b.dataset.i;render();try{tg&&tg.HapticFeedback.selectionChanged()}catch(err){}});
+$("lang").addEventListener("change",e=>{lang=e.target.value;store.set("l2",lang);render()});
+let tt;
+function showToast(m){$("toast").textContent=m;$("toast").classList.add("on");clearTimeout(tt);tt=setTimeout(()=>$("toast").classList.remove("on"),1800)}
+document.addEventListener("click",async e=>{const b=e.target.closest(".chip[data-c]");if(!b)return;
+ try{await navigator.clipboard.writeText(b.dataset.c);showToast("Скопійовано: "+b.dataset.c)}catch(err){showToast("Не вдалося скопіювати")}});
+render();
+const tick=setInterval(()=>{const prev=now.m;refreshNow();if(now.m!==prev)render()},15000);
+}
+</script>
+</body>
+</html>
